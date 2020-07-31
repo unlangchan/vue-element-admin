@@ -1,6 +1,6 @@
 <template>
   <div class="login-container">
-    <el-form ref="loginForm" :model="loginForm" :rules="loginRules" class="login-form" auto-complete="on" label-position="left">
+    <el-form ref="loginForm" :model="loginForm" :rules="loginRules" class="login-form" autocomplete="on" label-position="left">
 
       <div class="title-container">
         <h3 class="title">Login Form</h3>
@@ -17,7 +17,7 @@
           name="username"
           type="text"
           tabindex="1"
-          auto-complete="on"
+          autocomplete="on"
         />
       </el-form-item>
 
@@ -34,7 +34,7 @@
             placeholder="Password"
             name="password"
             tabindex="2"
-            auto-complete="on"
+            autocomplete="on"
             @keyup.native="checkCapslock"
             @blur="capsTooltip = false"
             @keyup.enter.native="handleLogin"
@@ -108,13 +108,18 @@ export default {
       capsTooltip: false,
       loading: false,
       showDialog: false,
-      redirect: undefined
+      redirect: undefined,
+      otherQuery: {}
     }
   },
   watch: {
     $route: {
       handler: function(route) {
-        this.redirect = route.query && route.query.redirect
+        const query = route.query
+        if (query) {
+          this.redirect = query.redirect
+          this.otherQuery = this.getOtherQuery(query)
+        }
       },
       immediate: true
     }
@@ -133,17 +138,9 @@ export default {
     // window.removeEventListener('storage', this.afterQRScan)
   },
   methods: {
-    checkCapslock({ shiftKey, key } = {}) {
-      if (key && key.length === 1) {
-        if (shiftKey && (key >= 'a' && key <= 'z') || !shiftKey && (key >= 'A' && key <= 'Z')) {
-          this.capsTooltip = true
-        } else {
-          this.capsTooltip = false
-        }
-      }
-      if (key === 'CapsLock' && this.capsTooltip === true) {
-        this.capsTooltip = false
-      }
+    checkCapslock(e) {
+      const { key } = e
+      this.capsTooltip = key && key.length === 1 && (key >= 'A' && key <= 'Z')
     },
     showPwd() {
       if (this.passwordType === 'password') {
@@ -161,7 +158,7 @@ export default {
           this.loading = true
           this.$store.dispatch('user/login', this.loginForm)
             .then(() => {
-              this.$router.push({ path: this.redirect || '/' })
+              this.$router.push({ path: this.redirect || '/', query: this.otherQuery })
               this.loading = false
             })
             .catch(() => {
@@ -172,6 +169,14 @@ export default {
           return false
         }
       })
+    },
+    getOtherQuery(query) {
+      return Object.keys(query).reduce((acc, cur) => {
+        if (cur !== 'redirect') {
+          acc[cur] = query[cur]
+        }
+        return acc
+      }, {})
     }
     // afterQRScan() {
     //   if (e.key === 'x-admin-oauth-code') {
